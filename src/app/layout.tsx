@@ -59,6 +59,22 @@ export default function RootLayout({
           <main className="flex-1">{children}</main>
         </PageTransition>
         <Footer />
+
+        {/* Speculation Rules — instant prerender on hover intent */}
+        <script
+          type="speculationrules"
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              prerender: [
+                {
+                  where: { href_matches: "/*" },
+                  eagerness: "moderate",
+                },
+              ],
+            }),
+          }}
+        />
       </body>
     </html>
   );

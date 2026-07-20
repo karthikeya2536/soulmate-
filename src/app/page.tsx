@@ -2,7 +2,7 @@ import { ScrollSequenceHero } from "@/components/ScrollSequenceHero";
 import { BrandStory } from "@/components/BrandStory";
 import { FeaturedProducts } from "@/components/FeaturedProducts";
 import { Marquee } from "@/components/Marquee";
-import { TextReveal } from "@/components/TextReveal";
+import { DynamicTextReveal } from "@/components/DynamicTextReveal";
 
 export default function HomePage() {
   return (
@@ -10,7 +10,7 @@ export default function HomePage() {
       <ScrollSequenceHero />
       <Marquee />
       <BrandStory />
-      <TextReveal />
+      <DynamicTextReveal />
       <FeaturedProducts />
     </>
   );

@@ -7,9 +7,11 @@ import { motion } from "motion/react";
 
 gsap.registerPlugin(ScrollTrigger);
 
-// 300 source frames → sample every 7th = ~43, cap at 40 for low memory
-const TOTAL_FRAMES = 40;
-const FRAME_STEP = 7;
+// 300 source frames → sample every 19th = ~16 frames for fast Vercel loads
+const TOTAL_FRAMES = 16;
+const FRAME_STEP = 19;
+
+const FIRST_FRAME_SRC = `/assets/sequence/frame_001.jpg`;
 
 export function ScrollSequenceHero() {
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -18,33 +20,40 @@ export function ScrollSequenceHero() {
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
   const imagesRef = useRef<(HTMLImageElement | null)[]>([]);
   const loadedRef = useRef(false);
+  const framesLoadedRef = useRef<boolean[]>([]);
   const rafRef = useRef<number>(0);
   const currentFrameRef = useRef(0);
   const [ready, setReady] = useState(false);
 
-  // ── Preload all 40 frames in parallel ──
+  // ── Progressively load frames — render each as it arrives ──
   useEffect(() => {
     if (loadedRef.current) return;
     loadedRef.current = true;
+    framesLoadedRef.current = new Array(TOTAL_FRAMES).fill(false);
 
-    const promises: Promise<void>[] = [];
+    let loadedCount = 0;
+
     for (let i = 0; i < TOTAL_FRAMES; i++) {
       const frameNum = 1 + i * FRAME_STEP;
       const idx = i;
-      promises.push(
-        new Promise<void>((resolve) => {
-          const img = new window.Image();
-          img.fetchPriority = i < 3 ? "high" : "low";
-          img.src = `/assets/sequence/frame_${String(frameNum).padStart(3, "0")}.jpg`;
-          img.onload = () => {
-            imagesRef.current[idx] = img;
-            resolve();
-          };
-          img.onerror = () => resolve();
-        })
-      );
+      const img = new window.Image();
+      img.fetchPriority = i === 0 ? "high" : "low";
+      img.src = `/assets/sequence/frame_${String(frameNum).padStart(3, "0")}.jpg`;
+      img.onload = () => {
+        imagesRef.current[idx] = img;
+        framesLoadedRef.current[idx] = true;
+        loadedCount++;
+        // Render this frame immediately if canvas is ready
+        if (ctxRef.current && idx === currentFrameRef.current) {
+          renderFrame(idx);
+        }
+        if (loadedCount === TOTAL_FRAMES) setReady(true);
+      };
+      img.onerror = () => {
+        loadedCount++;
+        if (loadedCount === TOTAL_FRAMES) setReady(true);
+      };
     }
-    Promise.all(promises).then(() => setReady(true));
   }, []);
 
   // ── Render a single frame to the canvas ──
@@ -54,8 +63,7 @@ export function ScrollSequenceHero() {
     const img = imagesRef.current[frameIndex];
     if (!ctx || !canvas || !img) return;
 
-    ctx.fillStyle = "#e3d1c8";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const canvasRatio = canvas.width / canvas.height;
     const imgRatio = img.width / img.height;
@@ -80,9 +88,9 @@ export function ScrollSequenceHero() {
     const zoomEl = zoomRef.current;
     if (!canvas || !section || !zoomEl) return;
 
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", { alpha: false, willReadFrequently: false });
     if (!ctx) return;
-    ctx.imageSmoothingEnabled = false; // nearest-neighbour for 1280×720 source → crisp + fast
+    ctx.imageSmoothingEnabled = false;
     ctxRef.current = ctx;
 
     // DPR = 1.0 — no retina oversampling, smooth on every device
@@ -94,7 +102,12 @@ export function ScrollSequenceHero() {
       canvas.style.height = `${rect.height}px`;
     };
     setCanvasSize();
-    window.addEventListener("resize", setCanvasSize);
+    let resizeTimer: number;
+    const handleResize = () => {
+      cancelAnimationFrame(resizeTimer);
+      resizeTimer = requestAnimationFrame(setCanvasSize);
+    };
+    window.addEventListener("resize", handleResize);
 
     // RAF-throttled frame renderer
     const throttledRender = (frameIndex: number) => {
@@ -105,13 +118,6 @@ export function ScrollSequenceHero() {
     };
 
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    // Draw frame 0 once images are ready
-    const boot = () => {
-      if (imagesRef.current[0]) { renderFrame(0); return; }
-      requestAnimationFrame(boot);
-    };
-    boot();
 
     if (!prefersReduced) {
       const tl = gsap.timeline({
@@ -141,16 +147,16 @@ export function ScrollSequenceHero() {
         0
       );
 
-      // ── Dolly zoom: canvas slowly scales up as you scroll ──
+      // ── Dolly zoom ──
       tl.to(
         zoomEl,
-        { scale: 1.18, duration: 1, ease: "none" },
+        { scale: 1.15, duration: 1, ease: "none" },
         0
       );
     }
 
     return () => {
-      window.removeEventListener("resize", setCanvasSize);
+      window.removeEventListener("resize", handleResize);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       ScrollTrigger.getAll().forEach((st) => st.kill());
     };
@@ -162,10 +168,12 @@ export function ScrollSequenceHero() {
       className="relative w-full bg-[#e3d1c8] flex flex-col"
     >
       <div className="sticky top-0 w-full h-screen flex items-center justify-center overflow-hidden">
-        {/* ── Zoom wrapper (GSAP scales this) ── */}
+        {/* ── Zoom wrapper ── */}
         <div
           ref={zoomRef}
           className="absolute inset-0 w-full h-full will-change-transform"
+          // Show first frame as CSS background for instant paint
+          style={{ backgroundImage: `url(${FIRST_FRAME_SRC})`, backgroundSize: "cover", backgroundPosition: "center" }}
         >
           <canvas
             ref={canvasRef}
@@ -173,17 +181,8 @@ export function ScrollSequenceHero() {
           />
         </div>
 
-        {/* ── Loading spinner ── */}
-        {!ready && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#e3d1c8]">
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-6 h-6 border-2 border-rose-gold/40 border-t-rose-gold rounded-full animate-spin" />
-            </div>
-          </div>
-        )}
-
         {/* ── Gradient vignette overlay ── */}
-        {/* Removed overlay */}
+        <div className="absolute inset-0 z-10 bg-gradient-to-t from-[#e3d1c8]/80 via-transparent to-transparent pointer-events-none" />
 
         {/* ── Content overlay ── */}
         <div className="relative z-20 text-center px-6 pointer-events-none">
@@ -222,31 +221,10 @@ export function ScrollSequenceHero() {
               className="inline-flex items-center gap-2 px-8 py-3 bg-espresso text-white font-medium text-sm rounded-full hover:bg-espresso/90 transition-all duration-500 group"
             >
               Explore the Collection
-              <span className="transition-all duration-300 group-hover:translate-x-1 inline-block">
-                →
-              </span>
+              <span className="transition-all duration-300 group-hover:translate-x-1 inline-block">→</span>
             </a>
           </motion.div>
         </div>
-
-        {/* ── Scroll indicator ── */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.5, duration: 1 }}
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 pointer-events-auto"
-        >
-          <div className="flex flex-col items-center gap-2 text-espresso/40">
-            <span className="text-[10px] tracking-[0.15em] uppercase font-light">
-              Scroll
-            </span>
-            <motion.div
-              animate={{ y: [0, 6, 0] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              className="w-px h-6 bg-gradient-to-b from-espresso/40 to-transparent"
-            />
-          </div>
-        </motion.div>
       </div>
     </section>
   );
