@@ -3,12 +3,9 @@
 import { motion } from "motion/react";
 import Image from "next/image";
 
-import { AmbientScene } from "./AmbientScene";
-
 export function TextReveal() {
   return (
     <section className="relative bg-bg py-24 md:py-36 overflow-hidden">
-      <AmbientScene />
       <div className="max-w-screen-2xl mx-auto px-6 md:px-12 lg:px-16">
         <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
           {/* Image first on mobile, right on desktop */}

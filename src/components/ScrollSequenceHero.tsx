@@ -1,14 +1,26 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { motion } from "motion/react";
+let gsapPromise: Promise<any> | null = null;
 
-gsap.registerPlugin(ScrollTrigger);
+function ensureGsap() {
+  if (!gsapPromise) {
+    gsapPromise = (async () => {
+      try {
+        const gsapMod = await import("gsap");
+        const { ScrollTrigger } = await import("gsap/ScrollTrigger");
+        gsapMod.default.registerPlugin(ScrollTrigger);
+        ScrollTrigger.normalizeScroll(true);
+        return { gsap: gsapMod.default, ScrollTrigger };
+      } catch {
+        return null;
+      }
+    })();
+  }
+  return gsapPromise;
+}
 
-// 300 source frames encoded as video for hardware-accelerated scrubbing.
-// 3.3 MB MP4 with all-keyframe encoding — instant seeking on every frame.
 const POSTER_SRC = "/assets/sequence/frame_001.jpg";
 const VIDEO_MP4 = "/assets/sequence/sequence.mp4";
 const VIDEO_WEBM = "/assets/sequence/sequence.webm";
@@ -26,9 +38,6 @@ export function ScrollSequenceHero() {
   });
 
   // ── Preload entire video into memory via blob URL ──
-  // This is critical on CDN deploys (Vercel et al.): the browser's range-request
-  // buffering can't seek to an arbitrary frame without re-fetching. By loading the
-  // whole file into a blob, seeking via currentTime is instant and frame-accurate.
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -40,26 +49,19 @@ export function ScrollSequenceHero() {
       try {
         const response = await fetch(VIDEO_MP4, { priority: "high" });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
         const blob = await response.blob();
         if (cancelled) return;
-
         blobUrl = URL.createObjectURL(blob);
         video.src = blobUrl;
         video.load();
-
         video.onloadedmetadata = () => {
           if (cancelled) return;
-          // Sync video to the current scroll position in case scrolling started
-          // before the video finished loading
           if (tlRef.current) {
             video.currentTime = tlRef.current.progress() * video.duration;
           }
           videoLoadedRef.current = true;
           setIsReady(true);
         };
-
-        // Already buffered (e.g., from cache)
         if (video.readyState >= HTMLMediaElement.HAVE_METADATA) {
           videoLoadedRef.current = true;
           setIsReady(true);
@@ -67,10 +69,7 @@ export function ScrollSequenceHero() {
       } catch (err) {
         if (cancelled) return;
         console.warn("Blob preload failed — falling back to CDN streaming", err);
-
-        // Fallback: stream directly from CDN
         video.src = VIDEO_MP4;
-
         video.oncanplaythrough = () => {
           if (!cancelled) {
             if (tlRef.current) {
@@ -80,7 +79,6 @@ export function ScrollSequenceHero() {
             setIsReady(true);
           }
         };
-
         if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
           videoLoadedRef.current = true;
           setIsReady(true);
@@ -90,7 +88,6 @@ export function ScrollSequenceHero() {
 
     loadVideo();
 
-    // Safety timeout — enable scrubbing after 20 s even if nothing loaded
     const fallback = setTimeout(() => {
       if (!cancelled && !videoLoadedRef.current) {
         videoLoadedRef.current = true;
@@ -108,6 +105,9 @@ export function ScrollSequenceHero() {
   }, []);
 
   // ── GSAP scroll-triggered video scrub + dolly zoom ──
+  // ⚠️  Uses CSS position: sticky for the pin effect instead of GSAP's
+  //     pin. CSS sticky is DOM-native — it never creates a pin-spacer
+  //     wrapper — which eliminates the removeChild error on navigation.
   useEffect(() => {
     const video = videoRef.current;
     const section = sectionRef.current;
@@ -119,65 +119,73 @@ export function ScrollSequenceHero() {
     ).matches;
     if (prefersReduced) return;
 
-    // Shorter scroll distance on touch to reduce fatigue
-    const endDist = isTouch ? "+=120%" : "+=280%";
+    let cancelled = false;
 
-    const tl = gsap.timeline({
-      scrollTrigger: {
-        trigger: section,
-        start: "top top",
-        end: endDist,
-        scrub: 0.6,
-        pin: true,
-        pinSpacing: true,
-        invalidateOnRefresh: true,
-      },
-    });
+    const initGsap = async () => {
+      const loaded = await ensureGsap();
+      if (!loaded || cancelled) return;
+      const { gsap, ScrollTrigger } = loaded;
 
-    // ── Video scrub — maps scroll progress (0→1) to video duration ──
-    tl.to(
-      {},
-      {
-        duration: 1,
-        ease: "none",
-        onUpdate: () => {
-          if (!videoLoadedRef.current) return;
-          video.currentTime = tl.progress() * video.duration;
+      const endDist = isTouch ? "+=120%" : "+=280%";
+
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: section,
+          start: "top top",
+          end: endDist,
+          scrub: 0.6,
+          pin: false,
+          invalidateOnRefresh: true,
         },
-      },
-      0
-    );
+      });
 
-    // ── Dolly zoom for parallax depth ──
-    tl.to(
-      zoomEl,
-      { scale: isTouch ? 1.08 : 1.15, duration: 1, ease: "none" },
-      0
-    );
+      tl.to(
+        {},
+        {
+          duration: 1,
+          ease: "none",
+          onUpdate: () => {
+            if (!videoLoadedRef.current) return;
+            video.currentTime = tl.progress() * video.duration;
+          },
+        },
+        0
+      );
 
-    tlRef.current = tl;
-    ScrollTrigger.refresh();
+      tl.to(
+        zoomEl,
+        { scale: isTouch ? 1.08 : 1.15, duration: 1, ease: "none" },
+        0
+      );
+
+      tlRef.current = tl;
+      ScrollTrigger.refresh();
+    };
+
+    initGsap();
 
     return () => {
-      // ⚠️ Must kill with revert=true before React unmounts, otherwise
-      // ScrollTrigger's pin-spacer wrapper breaks removeChild reconciliation.
+      cancelled = true;
       if (tlRef.current) {
         const st = tlRef.current.scrollTrigger;
-        if (st) {
-          st.kill(true); // true = revert pin, restore original DOM position
-        }
+        if (st) st.kill();
         tlRef.current.kill();
         tlRef.current = null;
       }
     };
   }, [isTouch]);
 
+  // Scroll distance: the outer section is this tall, while the inner
+  // sticky div stays fixed at the top. This replaces GSAP's pin-spacer
+  // — no DOM manipulation, no removeChild crash on navigation.
+  const scrollDist = isTouch ? "120vh" : "280vh";
+
   return (
     <section
       ref={sectionRef}
-      className="relative w-full bg-blush-light flex flex-col"
+      className="relative w-full bg-blush-light"
+      style={{ height: scrollDist }}
     >
-      {/* Subtle loading indicator — fades out once video blob is ready */}
       {!isReady && (
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
           <div className="flex items-center gap-2 px-4 py-2 bg-espresso/5 backdrop-blur-sm rounded-full">
@@ -189,17 +197,14 @@ export function ScrollSequenceHero() {
         </div>
       )}
 
-      <div className="sticky top-0 w-full h-screen flex items-center justify-center overflow-hidden">
+      <div className="sticky top-0 h-screen overflow-hidden">
         {/* ── Zoom wrapper — poster image renders instantly ── */}
         <div
           ref={zoomRef}
           className="absolute inset-0 w-full h-full will-change-transform"
         >
-          {/* Pink fill — becomes visible as the zoom wrapper scales up during scroll,
-              recreating the letterbox border effect from the original canvas approach */}
           <div className="absolute inset-0 bg-blush-light" />
 
-          {/* Content area with inset gap that reveals the pink borders on zoom */}
           <div className="absolute inset-[3%] md:inset-[5%] overflow-hidden">
             <div
               className="absolute inset-0"
@@ -224,11 +229,11 @@ export function ScrollSequenceHero() {
           </div>
         </div>
 
-        {/* ── Gradient vignette overlay — blush-light only, no espresso/white ── */}
+        {/* ── Gradient vignette overlay ── */}
         <div className="absolute inset-0 z-10 bg-gradient-to-t from-blush-light/80 via-transparent to-blush-light/5 pointer-events-none" />
 
         {/* ── Content ── */}
-        <div className="relative z-20 text-center px-6 pointer-events-none">
+        <div className="relative z-20 text-center px-6 pointer-events-none flex flex-col items-center justify-center h-full">
           <motion.h1
             initial={{ opacity: 0, y: 40, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}

@@ -12,13 +12,28 @@ export function LenisProvider() {
     if (typeof window === "undefined") return;
 
     const lenis = new Lenis({
-      duration: 1.4,
-      easing: (t: number) => (t === 1 ? 1 : 1 - Math.pow(1 - t, 3)),
+      duration: 1.2,
+      easing: (t: number) => Math.min(1, 1.001 - Math.pow(1 - t, 3)),
       smoothWheel: true,
       syncTouch: true,
+      touchMultiplier: 1.5,
     });
 
     lenisRef.current = lenis;
+
+    // ── Sync Lenis → GSAP ScrollTrigger (client only) ──
+    // Dynamic import avoids SSR crash — GSAP needs the DOM.
+    const syncGsap = async () => {
+      try {
+        const gsapMod = await import("gsap");
+        const { ScrollTrigger } = await import("gsap/ScrollTrigger");
+        gsapMod.default.registerPlugin(ScrollTrigger);
+        lenis.on("scroll", () => ScrollTrigger.update());
+      } catch {
+        // GSAP not available (e.g. build-time) — Lenis still works
+      }
+    };
+    syncGsap();
 
     function raf(time: number) {
       lenis.raf(time);
