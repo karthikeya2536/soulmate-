@@ -72,21 +72,6 @@ export default function RootLayout({
         </PageTransition>
         <Footer />
 
-        {/* Speculation Rules — instant prerender on hover intent */}
-        <script
-          type="speculationrules"
-          suppressHydrationWarning
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              prerender: [
-                {
-                  where: { href_matches: "/*" },
-                  eagerness: "moderate",
-                },
-              ],
-            }),
-          }}
-        />
       </body>
     </html>
   );
