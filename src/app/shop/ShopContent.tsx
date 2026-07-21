@@ -79,7 +79,7 @@ export function ShopContent() {
             {filtered.map((product, index) => (
               <Link
                 key={product.id}
-                href={`/shop`}
+                href={`/shop/${product.id}`}
                 className="group block"
                 onMouseEnter={() => setHoveredProduct(product.id)}
                 onMouseLeave={() => setHoveredProduct(null)}
@@ -105,7 +105,7 @@ export function ShopContent() {
                   >
                     <div className="translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
                       <span className="inline-block bg-white text-espresso text-xs font-medium px-4 py-2 rounded-full">
-                        Quick View
+                        View Product
                       </span>
                       <p className="mt-3 text-white/80 text-sm leading-relaxed line-clamp-2">
                         {product.description}

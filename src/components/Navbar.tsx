@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
+import { useCart } from "@/context/CartContext";
 
 const links = [
   { href: "/", label: "Home" },
@@ -16,6 +17,7 @@ const links = [
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { totalItems, setIsCartOpen } = useCart();
 
   const handleScroll = useCallback(() => {
     setScrolled(window.scrollY > 30);
@@ -73,8 +75,33 @@ export function Navbar() {
             ))}
           </div>
 
-          {/* Shop CTA */}
-          <div className="hidden lg:block">
+          {/* Cart + Shop CTA */}
+          <div className="hidden lg:flex items-center gap-3">
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="relative w-10 h-10 flex items-center justify-center text-espresso hover:text-rose-gold transition-colors"
+              aria-label="Open cart"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="9" cy="21" r="1" />
+                <circle cx="20" cy="21" r="1" />
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+              </svg>
+              {totalItems > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-rose-gold text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                  {totalItems > 9 ? "9+" : totalItems}
+                </span>
+              )}
+            </button>
             <Link
               href="/shop"
               className="inline-flex items-center gap-2 px-5 py-2 text-sm font-medium bg-espresso text-white rounded-full hover:bg-rose-gold-dark transition-all duration-300 hover:gap-3"
@@ -148,6 +175,28 @@ export function Navbar() {
                   </Link>
                 </motion.div>
               ))}
+              {/* Cart in mobile menu */}
+              <motion.div
+                variants={{
+                  hidden: { opacity: 0, y: 20 },
+                  visible: { opacity: 1, y: 0 },
+                }}
+              >
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setIsCartOpen(true);
+                  }}
+                  className="font-display text-3xl tracking-[-0.02em] text-espresso hover:text-rose-gold transition-colors duration-300"
+                >
+                  Cart
+                  {totalItems > 0 && (
+                    <span className="ml-2 text-sm font-body text-rose-gold">
+                      ({totalItems})
+                    </span>
+                  )}
+                </button>
+              </motion.div>
             </motion.nav>
           </motion.div>
         )}

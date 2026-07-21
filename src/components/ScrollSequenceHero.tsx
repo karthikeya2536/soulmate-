@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState } from "react";
 import { motion } from "motion/react";
+
 let gsapPromise: Promise<any> | null = null;
 
 function ensureGsap() {
@@ -36,6 +37,13 @@ export function ScrollSequenceHero() {
     if (typeof window === "undefined") return false;
     return window.matchMedia("(pointer: coarse)").matches;
   });
+
+  // ── Scroll distances ──
+  // CSS sticky provides only (sectionHeight - 100vh) of scroll distance
+  // because the sticky child unsticks when the parent's bottom reaches
+  // the viewport top. So sectionHeight = gsapEnd + 100vh.
+  const endDist = isTouch ? "+=120%" : "+=280%";
+  const sectionHeight = isTouch ? "220vh" : "380vh";
 
   // ── Preload entire video into memory via blob URL ──
   useEffect(() => {
@@ -105,9 +113,9 @@ export function ScrollSequenceHero() {
   }, []);
 
   // ── GSAP scroll-triggered video scrub + dolly zoom ──
-  // ⚠️  Uses CSS position: sticky for the pin effect instead of GSAP's
-  //     pin. CSS sticky is DOM-native — it never creates a pin-spacer
-  //     wrapper — which eliminates the removeChild error on navigation.
+  // Uses CSS position: sticky for the pin effect instead of GSAP's
+  // pin. CSS sticky is DOM-native — it never creates a pin-spacer
+  // wrapper — which eliminates the removeChild error on navigation.
   useEffect(() => {
     const video = videoRef.current;
     const section = sectionRef.current;
@@ -125,8 +133,6 @@ export function ScrollSequenceHero() {
       const loaded = await ensureGsap();
       if (!loaded || cancelled) return;
       const { gsap, ScrollTrigger } = loaded;
-
-      const endDist = isTouch ? "+=120%" : "+=280%";
 
       const tl = gsap.timeline({
         scrollTrigger: {
@@ -173,18 +179,13 @@ export function ScrollSequenceHero() {
         tlRef.current = null;
       }
     };
-  }, [isTouch]);
-
-  // Scroll distance: the outer section is this tall, while the inner
-  // sticky div stays fixed at the top. This replaces GSAP's pin-spacer
-  // — no DOM manipulation, no removeChild crash on navigation.
-  const scrollDist = isTouch ? "120vh" : "280vh";
+  }, [isTouch, endDist]);
 
   return (
     <section
       ref={sectionRef}
       className="relative w-full bg-blush-light"
-      style={{ height: scrollDist }}
+      style={{ height: sectionHeight }}
     >
       {!isReady && (
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 pointer-events-none">

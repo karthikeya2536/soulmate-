@@ -5,6 +5,8 @@ import { LenisProvider } from "@/components/LenisProvider";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { PageTransition } from "@/components/PageTransition";
+import { CartProvider } from "@/context/CartContext";
+import { CartDrawer } from "@/components/CartDrawer";
 
 const libreBodoni = Libre_Bodoni({
   variable: "--font-display",
@@ -65,12 +67,15 @@ export default function RootLayout({
             __html: `document.addEventListener("touchstart",()=>document.documentElement.classList.add("touch"),{passive:true,once:true})`,
           }}
         />
+        <CartProvider>
         <LenisProvider />
         <Navbar />
         <PageTransition>
           <main className="flex-1">{children}</main>
         </PageTransition>
         <Footer />
+        <CartDrawer />
+        </CartProvider>
 
       </body>
     </html>
