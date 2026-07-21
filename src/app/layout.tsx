@@ -59,10 +59,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col bg-bg text-ink font-body">
-        {/* Preload hero video for instant scroll-scrubbing on deploy */}
-        <link rel="preload" href="/assets/sequence/sequence.mp4" as="video" type="video/mp4" />
-
-        {/* Touch detection — prevents stuck hover states on mobile */}
+{/* Touch detection — prevents stuck hover states on mobile */}
         <script
           dangerouslySetInnerHTML={{
             __html: `document.addEventListener("touchstart",()=>document.documentElement.classList.add("touch"),{passive:true,once:true})`,
