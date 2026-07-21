@@ -106,7 +106,7 @@ export function ContactContent() {
                 </div>
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-2 px-8 py-3 bg-espresso text-white font-medium text-sm rounded-full hover:bg-rose-gold-dark transition-all duration-300 group"
+                  className="inline-flex items-center gap-2 px-8 min-h-[44px] bg-espresso text-white font-medium text-sm rounded-full hover:bg-rose-gold-dark transition-all duration-300 group"
                 >
                   Send Message
                   <span className="transition-all duration-300 group-hover:translate-x-1">

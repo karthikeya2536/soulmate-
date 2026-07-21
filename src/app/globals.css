@@ -75,6 +75,10 @@ body {
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 /* Lenis overrides */
@@ -110,6 +114,14 @@ html.lenis body {
   outline: 2px solid oklch(0.62 0.18 60);
   outline-offset: 2px;
   border-radius: 2px;
+}
+
+/* Neutralize hover effects on touch devices (prevents stuck hover state) */
+html.touch .group-hover\:scale-105,
+html.touch .group-hover\:opacity-100,
+html.touch .group-hover\:translate-y-0 {
+  transform: none !important;
+  opacity: 1 !important;
 }
 
 /* Hide scrollbar utility */

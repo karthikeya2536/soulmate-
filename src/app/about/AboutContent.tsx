@@ -23,7 +23,7 @@ export function AboutContent() {
           />
           <div className="absolute inset-0 bg-gradient-to-t from-espresso/50 via-espresso/10 to-transparent" />
           <div className="absolute bottom-0 left-0 p-8 md:p-14">
-            <h1 className="font-display text-5xl md:text-7xl lg:text-8xl tracking-[-0.025em] text-white leading-[0.95]">
+            <h1 className="font-display text-[clamp(1.75rem,6.5vw,3rem)] md:text-7xl lg:text-8xl tracking-[-0.025em] text-white leading-[0.95]">
               Born in Paris.
               <br />
               <span className="italic text-rose-gold">Made in Milan.</span>

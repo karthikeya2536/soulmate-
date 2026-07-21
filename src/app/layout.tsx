@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Libre_Bodoni, Manrope } from "next/font/google";
 import "./globals.css";
 import { LenisProvider } from "@/components/LenisProvider";
@@ -41,6 +41,12 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -53,6 +59,15 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col bg-bg text-ink font-body">
+        {/* Preload hero video for instant scroll-scrubbing on deploy */}
+        <link rel="preload" href="/assets/sequence/sequence.mp4" as="video" type="video/mp4" />
+
+        {/* Touch detection — prevents stuck hover states on mobile */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `document.addEventListener("touchstart",()=>document.documentElement.classList.add("touch"),{passive:true,once:true})`,
+          }}
+        />
         <LenisProvider />
         <Navbar />
         <PageTransition>
