@@ -13,6 +13,7 @@
   --color-espresso: oklch(0.22 0.025 60);
   --color-gold: oklch(0.72 0.16 80);
   --color-gold-light: oklch(0.88 0.08 80);
+  --color-hero-bg: #A88A75;
 
   --font-display: "Libre Bodoni", serif;
   --font-body: "Manrope", sans-serif;

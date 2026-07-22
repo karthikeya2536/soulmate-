@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
+import Link from "next/link";
 import { motion } from "motion/react";
 
 let gsapPromise: Promise<any> | null = null;
@@ -184,7 +185,7 @@ export function ScrollSequenceHero() {
   return (
     <section
       ref={sectionRef}
-      className="relative w-full bg-blush-light"
+      className="relative w-full bg-hero-bg"
       style={{ height: sectionHeight }}
     >
       {!isReady && (
@@ -204,9 +205,9 @@ export function ScrollSequenceHero() {
           ref={zoomRef}
           className="absolute inset-0 w-full h-full will-change-transform"
         >
-          <div className="absolute inset-0 bg-blush-light" />
+          <div className="absolute inset-0 bg-hero-bg" />
 
-          <div className="absolute inset-[3%] md:inset-[5%] overflow-hidden">
+          <div className="absolute inset-x-[3%] inset-y-0 md:inset-x-[5%] overflow-hidden">
             <div
               className="absolute inset-0"
               style={{
@@ -231,7 +232,7 @@ export function ScrollSequenceHero() {
         </div>
 
         {/* ── Gradient vignette overlay ── */}
-        <div className="absolute inset-0 z-10 bg-gradient-to-t from-blush-light/80 via-transparent to-blush-light/5 pointer-events-none" />
+        <div className="absolute inset-0 z-10 bg-gradient-to-t from-hero-bg/80 via-transparent to-hero-bg/5 pointer-events-none" />
 
         {/* ── Content ── */}
         <div className="relative z-20 text-center px-6 pointer-events-none flex flex-col items-center justify-center h-full">
@@ -265,7 +266,7 @@ export function ScrollSequenceHero() {
             transition={{ duration: 0.6, ease: [0.2, 0, 0, 1], delay: 1 }}
             className="mt-8 pointer-events-auto"
           >
-            <a
+            <Link
               href="/shop"
               className="inline-flex items-center gap-2 px-8 min-h-[44px] bg-espresso text-white font-medium text-sm rounded-full hover:bg-espresso/90 transition-all duration-500 group"
             >
@@ -273,7 +274,7 @@ export function ScrollSequenceHero() {
               <span className="transition-all duration-300 group-hover:translate-x-1 inline-block">
                 →
               </span>
-            </a>
+            </Link>
           </motion.div>
         </div>
       </div>
